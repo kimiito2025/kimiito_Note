@@ -1,0 +1,302 @@
+{
+  "info": {
+    "name": "Webex People API - AD to Control Hub",
+    "description": "ADユーザー情報をWebex Control Hubに反映するためのAPI集",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "https://webexapis.com/v1",
+      "type": "string"
+    },
+    {
+      "key": "access_token",
+      "value": "YOUR_ACCESS_TOKEN_HERE",
+      "type": "string",
+      "description": "developer.webex.com からコピーしたPersonal Access Token"
+    },
+    {
+      "key": "target_email",
+      "value": "user01@example.com",
+      "type": "string",
+      "description": "検索・作成対象のメールアドレス"
+    },
+    {
+      "key": "person_id",
+      "value": "",
+      "type": "string",
+      "description": "Step2の検索結果から取得したpersonId"
+    },
+    {
+      "key": "license_id",
+      "value": "",
+      "type": "string",
+      "description": "Step1のライセンス取得から取得したlicenseId"
+    }
+  ],
+  "item": [
+    {
+      "name": "Step 1: ライセンスID確認",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{access_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/licenses",
+          "host": ["{{base_url}}"],
+          "path": ["licenses"]
+        },
+        "description": "利用可能なライセンス一覧を取得する。\nWebex Calling のライセンスの id をコピーして、コレクション変数 license_id に設定すること。"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"Status is 200\", function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "",
+              "const json = pm.response.json();",
+              "if (json.items && json.items.length > 0) {",
+              "    console.log('=== ライセンス一覧 ===');",
+              "    json.items.forEach(item => {",
+              "        console.log(`name: ${item.name}`);",
+              "        console.log(`id:   ${item.id}`);",
+              "        console.log(`残余: ${item.totalUnits - item.consumedUnits} / ${item.totalUnits}`);",
+              "        console.log('---');",
+              "    });",
+              "}"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Step 2: ユーザー検索（存在確認）",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{access_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/people?email={{target_email}}",
+          "host": ["{{base_url}}"],
+          "path": ["people"],
+          "query": [
+            {
+              "key": "email",
+              "value": "{{target_email}}"
+            }
+          ]
+        },
+        "description": "メールアドレスでユーザーを検索する。\n- items が空 → Step 3a（新規作成）\n- items に値あり → items[0].id を person_id 変数に設定して Step 3b（更新）"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"Status is 200\", function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "",
+              "const json = pm.response.json();",
+              "if (json.items && json.items.length > 0) {",
+              "    const personId = json.items[0].id;",
+              "    pm.collectionVariables.set('person_id', personId);",
+              "    console.log('✅ ユーザーが存在します。person_id を設定しました: ' + personId);",
+              "    console.log('→ Step 3b（更新）に進んでください');",
+              "} else {",
+              "    console.log('⚠️ ユーザーが存在しません。');",
+              "    console.log('→ Step 3a（新規作成）に進んでください');",
+              "}"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Step 3a: ユーザー新規作成（POST）",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{access_token}}"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"emails\": [\"user01@example.com\"],\n  \"firstName\": \"Taro\",\n  \"lastName\": \"Yamada\",\n  \"displayName\": \"Taro Yamada\",\n  \"department\": \"IT部\",\n  \"title\": \"エンジニア\",\n  \"phoneNumbers\": [\n    {\n      \"type\": \"work\",\n      \"value\": \"+81312345678\"\n    }\n  ],\n  \"licenses\": [\"{{license_id}}\"]\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/people",
+          "host": ["{{base_url}}"],
+          "path": ["people"]
+        },
+        "description": "Control Hubに存在しないユーザーを新規作成する。\nBodyの emails, licenses は必須。\n成功後に返る id を person_id 変数に設定する。"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"Status is 200\", function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "",
+              "const json = pm.response.json();",
+              "if (json.id) {",
+              "    pm.collectionVariables.set('person_id', json.id);",
+              "    console.log('✅ ユーザーを作成しました。person_id: ' + json.id);",
+              "}"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Step 3b: 既存ユーザー情報更新（PUT）",
+      "request": {
+        "method": "PUT",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{access_token}}"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"emails\": [\"user01@example.com\"],\n  \"firstName\": \"Taro\",\n  \"lastName\": \"Yamada\",\n  \"displayName\": \"Taro Yamada\",\n  \"department\": \"ネットワーク部\",\n  \"title\": \"シニアエンジニア\",\n  \"phoneNumbers\": [\n    {\n      \"type\": \"work\",\n      \"value\": \"+81398765432\"\n    }\n  ],\n  \"licenses\": [\"{{license_id}}\"]\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/people/{{person_id}}",
+          "host": ["{{base_url}}"],
+          "path": ["people", "{{person_id}}"]
+        },
+        "description": "既存ユーザーの情報を更新する（ADの変更をControl Hubに反映）。\n⚠️ PUTのため全フィールドを送信すること。省略したフィールドはクリアされる場合がある。\nperson_id は Step 2 で取得した値を使用する。"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"Status is 200\", function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "",
+              "const json = pm.response.json();",
+              "if (json.id) {",
+              "    console.log('✅ ユーザーを更新しました。');",
+              "    console.log('displayName: ' + json.displayName);",
+              "    console.log('department:  ' + json.department);",
+              "    console.log('title:       ' + json.title);",
+              "}"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Step 4: 反映確認（GET）",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{access_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/people/{{person_id}}",
+          "host": ["{{base_url}}"],
+          "path": ["people", "{{person_id}}"]
+        },
+        "description": "personId を指定してユーザーの最新情報を取得し、Control Hubへの反映を確認する。\nstatus が active であることも確認する。"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"Status is 200\", function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "",
+              "const json = pm.response.json();",
+              "console.log('=== ユーザー情報確認 ===');",
+              "console.log('id:          ' + json.id);",
+              "console.log('displayName: ' + json.displayName);",
+              "console.log('emails:      ' + (json.emails || []).join(', '));",
+              "console.log('department:  ' + json.department);",
+              "console.log('title:       ' + json.title);",
+              "console.log('status:      ' + json.status);",
+              "",
+              "pm.test(\"ユーザーが active であること\", function () {",
+              "    pm.expect(json.status).to.eql('active');",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Step 5 (任意): ユーザー削除（DELETE）",
+      "request": {
+        "method": "DELETE",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{access_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/people/{{person_id}}",
+          "host": ["{{base_url}}"],
+          "path": ["people", "{{person_id}}"]
+        },
+        "description": "ADからユーザーが削除・無効化された場合に実行する。\n成功時のレスポンスは 204 No Content。"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"Status is 204 No Content\", function () {",
+              "    pm.response.to.have.status(204);",
+              "});",
+              "",
+              "if (pm.response.code === 204) {",
+              "    console.log('✅ ユーザーを削除しました。');",
+              "    pm.collectionVariables.set('person_id', '');",
+              "}"
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}
