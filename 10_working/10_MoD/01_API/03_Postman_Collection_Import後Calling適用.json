@@ -1,0 +1,226 @@
+{
+  "info": {
+    "name": "Webex Calling Post-Import Provisioning",
+    "description": "AD/Entra同期後のユーザに対して、内線・ハントグループ・ピックアップグループを適用するための補助コレクション。",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "base_url", "value": "https://webexapis.com/v1", "type": "string" },
+    { "key": "access_token", "value": "YOUR_ADMIN_TOKEN", "type": "string" },
+
+    { "key": "target_email", "value": "user01@example.com", "type": "string" },
+    { "key": "person_id", "value": "", "type": "string" },
+
+    { "key": "location_id", "value": "", "type": "string" },
+    { "key": "extension", "value": "1234", "type": "string" },
+    { "key": "work_phone", "value": "+81312345678", "type": "string" },
+
+    { "key": "display_name", "value": "Taro Yamada", "type": "string" },
+    { "key": "first_name", "value": "Taro", "type": "string" },
+    { "key": "last_name", "value": "Yamada", "type": "string" },
+    { "key": "department", "value": "IT", "type": "string" },
+    { "key": "title", "value": "Engineer", "type": "string" },
+    { "key": "license_id", "value": "", "type": "string" },
+
+    { "key": "hunt_group_name", "value": "Sales-HG", "type": "string" },
+    { "key": "hunt_group_id", "value": "", "type": "string" },
+
+    { "key": "pickup_group_name", "value": "Sales-PU", "type": "string" },
+    { "key": "pickup_group_id", "value": "", "type": "string" },
+
+    { "key": "hunt_group_list_url", "value": "{{base_url}}/telephony/config/locations/{{location_id}}/huntGroups", "type": "string" },
+    { "key": "hunt_group_get_url", "value": "{{base_url}}/telephony/config/locations/{{location_id}}/huntGroups/{{hunt_group_id}}", "type": "string" },
+    { "key": "hunt_group_update_url", "value": "{{base_url}}/telephony/config/locations/{{location_id}}/huntGroups/{{hunt_group_id}}", "type": "string" },
+
+    { "key": "pickup_group_list_url", "value": "{{base_url}}/telephony/config/locations/{{location_id}}/callPickups", "type": "string" },
+    { "key": "pickup_group_get_url", "value": "{{base_url}}/telephony/config/locations/{{location_id}}/callPickups/{{pickup_group_id}}", "type": "string" },
+    { "key": "pickup_group_update_url", "value": "{{base_url}}/telephony/config/locations/{{location_id}}/callPickups/{{pickup_group_id}}", "type": "string" }
+  ],
+  "item": [
+    {
+      "name": "0) ユーザ検索（email -> person_id）",
+      "request": {
+        "method": "GET",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{access_token}}" }
+        ],
+        "url": {
+          "raw": "{{base_url}}/people?email={{target_email}}",
+          "host": ["{{base_url}}"],
+          "path": ["people"],
+          "query": [{ "key": "email", "value": "{{target_email}}" }]
+        },
+        "description": "同期済みユーザをメールで検索して person_id を変数に保存する。"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Status is 200', function () { pm.response.to.have.status(200); });",
+              "const json = pm.response.json();",
+              "if (json.items && json.items.length > 0) {",
+              "  pm.collectionVariables.set('person_id', json.items[0].id);",
+              "  console.log('person_id set: ' + json.items[0].id);",
+              "} else {",
+              "  console.log('user not found by email: ' + pm.collectionVariables.get('target_email'));",
+              "}"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "1) ユーザ詳細確認（callingData=true）",
+      "request": {
+        "method": "GET",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{access_token}}" }
+        ],
+        "url": {
+          "raw": "{{base_url}}/people/{{person_id}}?callingData=true",
+          "host": ["{{base_url}}"],
+          "path": ["people", "{{person_id}}"],
+          "query": [{ "key": "callingData", "value": "true" }]
+        },
+        "description": "現状のユーザ情報を確認。PUT前に必ず実行する。"
+      }
+    },
+    {
+      "name": "2) 内線適用（People PUT, callingData=true）",
+      "request": {
+        "method": "PUT",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{access_token}}" },
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"emails\": [\"{{target_email}}\"],\n  \"displayName\": \"{{display_name}}\",\n  \"firstName\": \"{{first_name}}\",\n  \"lastName\": \"{{last_name}}\",\n  \"department\": \"{{department}}\",\n  \"title\": \"{{title}}\",\n  \"locationId\": \"{{location_id}}\",\n  \"extension\": \"{{extension}}\",\n  \"phoneNumbers\": [\n    {\n      \"type\": \"work\",\n      \"value\": \"{{work_phone}}\"\n    }\n  ],\n  \"licenses\": [\"{{license_id}}\"]\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/people/{{person_id}}?callingData=true",
+          "host": ["{{base_url}}"],
+          "path": ["people", "{{person_id}}"],
+          "query": [{ "key": "callingData", "value": "true" }]
+        },
+        "description": "内線適用。People PUTは全体更新に近いため、実環境の必要項目は1)の結果で補完してから実行する。"
+      }
+    },
+    {
+      "name": "3) ハントグループ一覧取得（URL変数）",
+      "request": {
+        "method": "GET",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{access_token}}" }
+        ],
+        "url": { "raw": "{{hunt_group_list_url}}", "host": ["{{hunt_group_list_url}}"] },
+        "description": "ハントグループ一覧取得。APIバージョン差分があるため URL は変数化。必要に応じて hunt_group_list_url を修正する。"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "const json = pm.response.json();",
+              "const target = pm.collectionVariables.get('hunt_group_name');",
+              "const items = json.items || [];",
+              "items.forEach(i => console.log((i.name || '(no-name)') + ' : ' + (i.id || '(no-id)')));",
+              "const found = items.find(i => i.name === target);",
+              "if (found && found.id) {",
+              "  pm.collectionVariables.set('hunt_group_id', found.id);",
+              "  console.log('hunt_group_id set: ' + found.id);",
+              "}"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "4) ハントグループ詳細取得（URL変数）",
+      "request": {
+        "method": "GET",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{access_token}}" }
+        ],
+        "url": { "raw": "{{hunt_group_get_url}}", "host": ["{{hunt_group_get_url}}"] },
+        "description": "対象ハントグループの現在設定を取得。更新前バックアップ用途。"
+      }
+    },
+    {
+      "name": "5) ハントグループ更新（URL変数, body要編集）",
+      "request": {
+        "method": "PUT",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{access_token}}" },
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"name\": \"{{hunt_group_name}}\",\n  \"agents\": [\n    {\n      \"id\": \"{{person_id}}\",\n      \"weight\": 1\n    }\n  ]\n}"
+        },
+        "url": { "raw": "{{hunt_group_update_url}}", "host": ["{{hunt_group_update_url}}"] },
+        "description": "実スキーマは環境で差異があり得るため、4)のレスポンスをベースに members/agents をマージして送信する。"
+      }
+    },
+    {
+      "name": "6) ピックアップグループ一覧取得（URL変数）",
+      "request": {
+        "method": "GET",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{access_token}}" }
+        ],
+        "url": { "raw": "{{pickup_group_list_url}}", "host": ["{{pickup_group_list_url}}"] },
+        "description": "ピックアップグループ一覧取得。APIバージョン差分があるため URL は変数化。"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "const json = pm.response.json();",
+              "const target = pm.collectionVariables.get('pickup_group_name');",
+              "const items = json.items || [];",
+              "items.forEach(i => console.log((i.name || '(no-name)') + ' : ' + (i.id || '(no-id)')));",
+              "const found = items.find(i => i.name === target);",
+              "if (found && found.id) {",
+              "  pm.collectionVariables.set('pickup_group_id', found.id);",
+              "  console.log('pickup_group_id set: ' + found.id);",
+              "}"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "7) ピックアップグループ詳細取得（URL変数）",
+      "request": {
+        "method": "GET",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{access_token}}" }
+        ],
+        "url": { "raw": "{{pickup_group_get_url}}", "host": ["{{pickup_group_get_url}}"] },
+        "description": "対象ピックアップグループの現在設定を取得。"
+      }
+    },
+    {
+      "name": "8) ピックアップグループ更新（URL変数, body要編集）",
+      "request": {
+        "method": "PUT",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{access_token}}" },
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"name\": \"{{pickup_group_name}}\",\n  \"agents\": [\n    {\n      \"id\": \"{{person_id}}\"\n    }\n  ]\n}"
+        },
+        "url": { "raw": "{{pickup_group_update_url}}", "host": ["{{pickup_group_update_url}}"] },
+        "description": "実スキーマ差分に合わせて 7)のレスポンスをベースに members/agents をマージして送信する。"
+      }
+    }
+  ]
+}

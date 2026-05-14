@@ -23,6 +23,54 @@
       "description": "検索・作成対象のメールアドレス"
     },
     {
+      "key": "first_name",
+      "value": "Taro",
+      "type": "string",
+      "description": "作成・更新対象ユーザーの名"
+    },
+    {
+      "key": "last_name",
+      "value": "Yamada",
+      "type": "string",
+      "description": "作成・更新対象ユーザーの姓"
+    },
+    {
+      "key": "display_name",
+      "value": "Taro Yamada",
+      "type": "string",
+      "description": "Control Hub に表示する氏名"
+    },
+    {
+      "key": "department",
+      "value": "IT部",
+      "type": "string",
+      "description": "部署名"
+    },
+    {
+      "key": "title",
+      "value": "エンジニア",
+      "type": "string",
+      "description": "役職名"
+    },
+    {
+      "key": "work_phone",
+      "value": "+81312345678",
+      "type": "string",
+      "description": "勤務先電話番号"
+    },
+    {
+      "key": "location_id",
+      "value": "",
+      "type": "string",
+      "description": "Webex Calling 用の locationId"
+    },
+    {
+      "key": "extension",
+      "value": "1001",
+      "type": "string",
+      "description": "Webex Calling 用の内線番号（任意）"
+    },
+    {
       "key": "person_id",
       "value": "",
       "type": "string",
@@ -79,6 +127,49 @@
       ]
     },
     {
+      "name": "Step 1.5: ロケーションID確認（Webex Calling用）",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{access_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/locations",
+          "host": ["{{base_url}}"],
+          "path": ["locations"]
+        },
+        "description": "Webex Calling ユーザー作成時に必要な locationId を取得する。\n使いたい拠点の id をコレクション変数 location_id に設定する。"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"Status is 200\", function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "",
+              "const json = pm.response.json();",
+              "if (json.items && json.items.length > 0) {",
+              "    console.log('=== ロケーション一覧 ===');",
+              "    json.items.forEach(item => {",
+              "        console.log(`name: ${item.name}`);",
+              "        console.log(`id:   ${item.id}`);",
+              "        console.log('---');",
+              "    });",
+              "} else {",
+              "    console.log('⚠️ ロケーションが見つかりませんでした。Control Hub 側の設定を確認してください。');",
+              "}"
+            ]
+          }
+        }
+      ]
+    },
+    {
       "name": "Step 2: ユーザー検索（存在確認）",
       "request": {
         "method": "GET",
@@ -127,7 +218,7 @@
       ]
     },
     {
-      "name": "Step 3a: ユーザー新規作成（POST）",
+      "name": "Step 3a: ユーザー新規作成（標準ライセンス）",
       "request": {
         "method": "POST",
         "header": [
@@ -142,14 +233,14 @@
         ],
         "body": {
           "mode": "raw",
-          "raw": "{\n  \"emails\": [\"user01@example.com\"],\n  \"firstName\": \"Taro\",\n  \"lastName\": \"Yamada\",\n  \"displayName\": \"Taro Yamada\",\n  \"department\": \"IT部\",\n  \"title\": \"エンジニア\",\n  \"phoneNumbers\": [\n    {\n      \"type\": \"work\",\n      \"value\": \"+81312345678\"\n    }\n  ],\n  \"licenses\": [\"{{license_id}}\"]\n}"
+          "raw": "{\n  \"emails\": [\"{{target_email}}\"],\n  \"firstName\": \"{{first_name}}\",\n  \"lastName\": \"{{last_name}}\",\n  \"displayName\": \"{{display_name}}\",\n  \"department\": \"{{department}}\",\n  \"title\": \"{{title}}\",\n  \"licenses\": [\"{{license_id}}\"]\n}"
         },
         "url": {
           "raw": "{{base_url}}/people",
           "host": ["{{base_url}}"],
           "path": ["people"]
         },
-        "description": "Control Hubに存在しないユーザーを新規作成する。\nBodyの emails, licenses は必須。\n成功後に返る id を person_id 変数に設定する。"
+        "description": "Control Hubに存在しないユーザーを新規作成する（標準ライセンス向け）。\nBodyの emails, licenses は必須。\n成功後に返る id を person_id 変数に設定する。"
       },
       "event": [
         {
@@ -172,6 +263,51 @@
       ]
     },
     {
+      "name": "Step 3a-C: ユーザー新規作成（Webex Callingライセンス）",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{access_token}}"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"emails\": [\"{{target_email}}\"],\n  \"firstName\": \"{{first_name}}\",\n  \"lastName\": \"{{last_name}}\",\n  \"displayName\": \"{{display_name}}\",\n  \"department\": \"{{department}}\",\n  \"title\": \"{{title}}\",\n  \"locationId\": \"{{location_id}}\",\n  \"extension\": \"{{extension}}\",\n  \"phoneNumbers\": [\n    {\n      \"type\": \"work\",\n      \"value\": \"{{work_phone}}\"\n    }\n  ],\n  \"licenses\": [\"{{license_id}}\"]\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/people",
+          "host": ["{{base_url}}"],
+          "path": ["people"]
+        },
+        "description": "Webex Calling ライセンスを割り当ててユーザーを新規作成する。\nlocationId と phoneNumbers または extension が必要。\n成功後に返る id を person_id 変数に設定する。"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"Status is 200\", function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "",
+              "const json = pm.response.json();",
+              "if (json.id) {",
+              "    pm.collectionVariables.set('person_id', json.id);",
+              "    console.log('✅ Webex Calling ユーザーを作成しました。person_id: ' + json.id);",
+              "}"
+            ]
+          }
+        }
+      ]
+    },
+    {
       "name": "Step 3b: 既存ユーザー情報更新（PUT）",
       "request": {
         "method": "PUT",
@@ -187,7 +323,7 @@
         ],
         "body": {
           "mode": "raw",
-          "raw": "{\n  \"emails\": [\"user01@example.com\"],\n  \"firstName\": \"Taro\",\n  \"lastName\": \"Yamada\",\n  \"displayName\": \"Taro Yamada\",\n  \"department\": \"ネットワーク部\",\n  \"title\": \"シニアエンジニア\",\n  \"phoneNumbers\": [\n    {\n      \"type\": \"work\",\n      \"value\": \"+81398765432\"\n    }\n  ],\n  \"licenses\": [\"{{license_id}}\"]\n}"
+          "raw": "{\n  \"emails\": [\"{{target_email}}\"],\n  \"firstName\": \"{{first_name}}\",\n  \"lastName\": \"{{last_name}}\",\n  \"displayName\": \"{{display_name}}\",\n  \"department\": \"{{department}}\",\n  \"title\": \"{{title}}\",\n  \"phoneNumbers\": [\n    {\n      \"type\": \"work\",\n      \"value\": \"{{work_phone}}\"\n    }\n  ],\n  \"licenses\": [\"{{license_id}}\"]\n}"
         },
         "url": {
           "raw": "{{base_url}}/people/{{person_id}}",

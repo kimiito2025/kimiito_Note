@@ -23,6 +23,10 @@
 1. Postmanを起動
 2. 同梱の `Webex_People_API.postman_collection.json` をインポート  
    （File → Import → ファイルを選択）
+  - 開けない場合は、次のどれかで代替する
+    - Import 画面の `Upload Files` ではなく、JSONファイルをPostman画面へドラッグ&ドロップする
+    - Import 画面の `Raw text` タブに JSON の中身を貼り付けて `Import` する
+    - エクスプローラーで JSON をデスクトップ等へコピーしてから選択する（OneDrive配下だと選択に失敗する場合がある）
 3. コレクションの「Variables」タブを開き、以下を設定：
 
 | 変数名 | 設定値 |
@@ -30,8 +34,75 @@
 | `base_url` | `https://webexapis.com/v1` |
 | `access_token` | 手順1で取得したトークン |
 | `target_email` | テスト対象ユーザーのメールアドレス |
+| `first_name` | 作成するユーザーの名 |
+| `last_name` | 作成するユーザーの姓 |
+| `display_name` | Control Hub表示名 |
+| `department` | 部署名 |
+| `title` | 役職 |
+| `work_phone` | 勤務先電話番号 |
+| `location_id` | Webex Calling 用の locationId |
+| `extension` | Webex Calling 用の内線番号（任意） |
 | `person_id` | ※後の手順で取得してから入力 |
 | `license_id` | ※後の手順で取得してから入力 |
+
+補足：
+- Import 成功後は左ペインに `Webex People API - AD to Control Hub` が表示される
+- 何も表示されない場合は Postman を再起動して再インポートする
+
+---
+
+## まずはこれだけ：3ステップで1ユーザー追加
+
+この章だけ実施すれば、Postman から Control Hub へのユーザー追加を確認できる。
+
+### Step A: 入力する値（Variables）
+
+Postman コレクションの Variables に次を入れる。
+
+| 変数名 | 例 |
+|--------|----|
+| `access_token` | 手順1で取得したトークン |
+| `target_email` | `user01@example.com` |
+| `first_name` | `Taro` |
+| `last_name` | `Yamada` |
+| `display_name` | `Taro Yamada` |
+| `department` | `IT部` |
+| `title` | `エンジニア` |
+| `work_phone` | `+81312345678` |
+
+### Step B: 押す順番
+
+1. `Step 1: ライセンスID確認` を実行
+2. レスポンスから使いたいライセンスの `id` を `license_id` に貼り付け
+3. `Step 3a: ユーザー新規作成（標準ライセンス）` を実行
+4. `Step 4: 反映確認（GET）` を実行
+
+### Step C: 成功判定
+
+- `Step 3a` が 200 なら作成成功
+- `Step 4` で `status: active` なら反映完了
+
+### つまずきやすいポイント
+
+- 409 Conflict: そのメールアドレスは既に存在（別メールアドレスで再実行）
+- 401 Unauthorized: トークン期限切れ（Personal Access Token を再取得）
+- メールドメインは Control Hub 登録済みドメインのみ利用可能
+
+### Webex Callingライセンスで作成する場合
+
+Webex Calling ライセンスを使うときは、標準の Step 3a ではなく `Step 3a-C` を使う。
+
+1. Step 1 で Webex Calling ライセンスの `id` を `license_id` に設定
+2. Step 1.5 でロケーション一覧を取得し、対象拠点の `id` を `location_id` に設定
+3. Variables に `work_phone`（または `extension`）を設定
+4. `Step 3a-C: ユーザー新規作成（Webex Callingライセンス）` を実行
+5. `Step 4: 反映確認（GET）` を実行
+
+ロケーションID取得の詳細：
+- Method: GET
+- URL: `{{base_url}}/locations`
+- Headers: `Authorization: Bearer {{access_token}}`
+- レスポンス `items[].name` で拠点を選び、`items[].id` を `location_id` に設定
 
 ---
 
@@ -99,7 +170,7 @@ Webex Calling に対応するライセンスの `name` を確認し、その `id
 
 ---
 
-## Step 3a：新規ユーザー作成（ADにいてControl Hubに未登録の場合）
+## Step 3a：新規ユーザー作成（標準ライセンス）
 
 | 項目 | 値 |
 |------|-----|
@@ -112,18 +183,12 @@ Webex Calling に対応するライセンスの `name` を確認し、その `id
 
 ```json
 {
-  "emails": ["user01@example.com"],
-  "firstName": "Taro",
-  "lastName": "Yamada",
-  "displayName": "Taro Yamada",
-  "department": "IT部",
-  "title": "エンジニア",
-  "phoneNumbers": [
-    {
-      "type": "work",
-      "value": "+81312345678"
-    }
-  ],
+  "emails": ["{{target_email}}"],
+  "firstName": "{{first_name}}",
+  "lastName": "{{last_name}}",
+  "displayName": "{{display_name}}",
+  "department": "{{department}}",
+  "title": "{{title}}",
   "licenses": ["{{license_id}}"]
 }
 ```
@@ -147,6 +212,43 @@ Webex Calling に対応するライセンスの `name` を確認し、その `id
 
 ---
 
+## Step 3a-C：新規ユーザー作成（Webex Callingライセンス）
+
+| 項目 | 値 |
+|------|-----|
+| Method | POST |
+| URL | `{{base_url}}/people` |
+| Headers | `Authorization: Bearer {{access_token}}` |
+| Headers | `Content-Type: application/json` |
+
+**Request Body（JSON）**：
+
+```json
+{
+  "emails": ["{{target_email}}"],
+  "firstName": "{{first_name}}",
+  "lastName": "{{last_name}}",
+  "displayName": "{{display_name}}",
+  "department": "{{department}}",
+  "title": "{{title}}",
+  "locationId": "{{location_id}}",
+  "extension": "{{extension}}",
+  "phoneNumbers": [
+    {
+      "type": "work",
+      "value": "{{work_phone}}"
+    }
+  ],
+  "licenses": ["{{license_id}}"]
+}
+```
+
+**ポイント**：
+- Webex Calling ライセンスでは `locationId` が必要
+- `phoneNumbers` または `extension` のいずれかが必要
+
+---
+
 ## Step 3b：既存ユーザー情報更新（ADの変更をControl Hubに反映）
 
 | 項目 | 値 |
@@ -160,16 +262,16 @@ Webex Calling に対応するライセンスの `name` を確認し、その `id
 
 ```json
 {
-  "emails": ["user01@example.com"],
-  "firstName": "Taro",
-  "lastName": "Yamada",
-  "displayName": "Taro Yamada",
-  "department": "ネットワーク部",
-  "title": "シニアエンジニア",
+  "emails": ["{{target_email}}"],
+  "firstName": "{{first_name}}",
+  "lastName": "{{last_name}}",
+  "displayName": "{{display_name}}",
+  "department": "{{department}}",
+  "title": "{{title}}",
   "phoneNumbers": [
     {
       "type": "work",
-      "value": "+81398765432"
+      "value": "{{work_phone}}"
     }
   ],
   "licenses": ["{{license_id}}"]
@@ -216,9 +318,10 @@ AD側でアカウントが無効化・削除された場合の対応
 | 1 | ライセンス取得 | GET | `/licenses` | ライセンスID確認 |
 | 2 | ユーザー検索 | GET | `/people?email={email}` | ADユーザーの存在確認 |
 | 3 | ユーザー詳細取得 | GET | `/people/{personId}` | 個人情報の確認 |
-| 4 | ユーザー作成 | POST | `/people` | 新規ユーザーをControl Hubに追加 |
-| 5 | ユーザー更新 | PUT | `/people/{personId}` | AD変更のControl Hubへの反映 |
-| 6 | ユーザー削除 | DELETE | `/people/{personId}` | ADから削除されたユーザーの削除 |
+| 4 | ユーザー作成（標準） | POST | `/people` | 新規ユーザーをControl Hubに追加 |
+| 5 | ユーザー作成（Webex Calling） | POST | `/people` | Webex Calling 情報付きで新規作成 |
+| 6 | ユーザー更新 | PUT | `/people/{personId}` | AD変更のControl Hubへの反映 |
+| 7 | ユーザー削除 | DELETE | `/people/{personId}` | ADから削除されたユーザーの削除 |
 
 ---
 
@@ -231,6 +334,20 @@ AD側でアカウントが無効化・削除された場合の対応
 | 403 Forbidden | 権限不足 | 管理者アカウントか確認 |
 | 404 Not Found | personIdが存在しない | Step 2でIDを再取得 |
 | 409 Conflict | メールアドレスが重複 | Step 2で検索してIDを取得してからPUTへ |
+
+### 追加メモ（400: Calling flag not set の場合）
+
+`Calling flag not set` は、`license_id` に Webex Calling 系ライセンスを指定した際に発生しやすい。
+
+まずは成功優先で、次のどちらかで対応する。
+
+1. **最短回避（推奨）**  
+  Step 1 で Webex Calling 以外のライセンスIDを `license_id` に設定して Step 3a を再実行する。
+
+2. **Webex Callingユーザーとして作る場合**  
+  Request Body に `locationId` を追加し、`phoneNumbers` または `extension` を必ず含める。
+
+補足：Create a Person は 400 が返ってもユーザー自体は作成済みの場合があるため、失敗時は Step 2（`GET /people?email=...`）で存在確認してから再試行する。
 
 ---
 
