@@ -1,0 +1,37 @@
+LOCAL_IP: 192.168.103.124
+
+[Top DNS Queries]
+  31 ty01.hosted-jp.bcld.webex.com
+  18 ty01.stun-jp.bcld.webex.com
+  10 _sips._tls.ty01.hosted-jp.bcld.webex.com
+   9 stun51a-jp.bcld.webex.com
+   9 stun50a-jp.bcld.webex.com
+   4 desktop.wxcc-jp1.cisco.com
+   4 edge.microsoft.com
+   3 analyzer-v2.wxcc-jp1.cisco.com
+   2 idbroker-sg.webex.com
+   2 idbroker-static.webex.com
+   2 identity-sg.webex.com
+   2 auth.split.io
+   2 analyzerui-wxccanalyzer.ciscoccservice.com
+   2 wc.webexengage.com
+   2 webexapis.com
+   2 wc.imiengage.io
+   2 ccwcapi-site-1.anz.webexengage.com
+   2 config-service.prodjp1.ciscoccservice.com
+   1 u2c.wbx2.com
+   1 tsa.webex.com
+   1 wpad.cisco.com
+   1 u2c-a.wbx2.com
+   1 prod-achm-general.svc.webex.com
+   1 wdm-a.wbx2.com
+   1 sdk.split.io
+   1 api.wxcc-jp1.cisco.com
+   1 wxccanalyzer.wxcc-jp1.cisco.com
+   1 mercury-connection-partition0-a.wbx2.com
+   1 agentx-backend.prodjp1.ciscoccservice.com
+   1 journey-widget.webex.com
+   1 wxccanalyzerbe.wxcc-jp1.cisco.com
+
+[Top TLS SNI]
+   4 ty6-wxt-jp.bcld.webex.com

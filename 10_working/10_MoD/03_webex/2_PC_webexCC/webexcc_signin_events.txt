@@ -1,0 +1,35 @@
+LOCAL_IP: 192.168.103.124
+FIRST_TS: 1779413885.897899
+
+   0.000s | DNS Query       | ty01.hosted-jp.bcld.webex.com                                | 192.168.103.124 -> 64.104.14.184
+   0.015s | DNS Query       | _sips._tls.ty01.hosted-jp.bcld.webex.com                     | 192.168.103.124 -> 64.104.14.184
+   3.445s | DNS Query       | ty01.stun-jp.bcld.webex.com                                  | 192.168.103.124 -> 64.104.14.184
+   3.447s | DNS Query       | stun51a-jp.bcld.webex.com                                    | 192.168.103.124 -> 64.104.14.184
+   3.448s | DNS Query       | stun50a-jp.bcld.webex.com                                    | 192.168.103.124 -> 64.104.14.184
+   8.024s | TLS ClientHello | ty6-wxt-jp.bcld.webex.com                                    | 192.168.103.124 -> 135.84.169.185:443
+  10.353s | DNS Query       | u2c.wbx2.com                                                 | 192.168.103.124 -> 64.104.14.184
+  11.031s | DNS Query       | tsa.webex.com                                                | 192.168.103.124 -> 64.104.14.184
+  11.854s | DNS Query       | desktop.wxcc-jp1.cisco.com                                   | 192.168.103.124 -> 64.104.14.184
+  13.850s | DNS Query       | idbroker-sg.webex.com                                        | 192.168.103.124 -> 64.104.14.184
+  13.852s | DNS Query       | wpad.cisco.com                                               | 192.168.103.124 -> 64.104.14.184
+  14.403s | DNS Query       | u2c-a.wbx2.com                                               | 192.168.103.124 -> 64.104.14.184
+  14.908s | DNS Query       | prod-achm-general.svc.webex.com                              | 192.168.103.124 -> 64.104.14.184
+  17.245s | DNS Query       | idbroker-static.webex.com                                    | 192.168.103.124 -> 64.104.14.184
+  18.038s | DNS Query       | edge.microsoft.com                                           | 192.168.103.124 -> 64.104.14.184
+  25.912s | DNS Query       | identity-sg.webex.com                                        | 192.168.103.124 -> 64.104.14.184
+  25.922s | DNS Query       | wdm-a.wbx2.com                                               | 192.168.103.124 -> 64.104.14.184
+  26.617s | DNS Query       | sdk.split.io                                                 | 192.168.103.124 -> 64.104.14.184
+  26.620s | DNS Query       | auth.split.io                                                | 192.168.103.124 -> 64.104.14.184
+  26.725s | DNS Query       | analyzerui-wxccanalyzer.ciscoccservice.com                   | 192.168.103.124 -> 64.104.14.184
+  26.793s | DNS Query       | api.wxcc-jp1.cisco.com                                       | 192.168.103.124 -> 64.104.14.184
+  27.246s | DNS Query       | wxccanalyzer.wxcc-jp1.cisco.com                              | 192.168.103.124 -> 64.104.14.184
+  29.505s | DNS Query       | mercury-connection-partition0-a.wbx2.com                     | 192.168.103.124 -> 64.104.14.184
+  31.725s | DNS Query       | agentx-backend.prodjp1.ciscoccservice.com                    | 192.168.103.124 -> 64.104.14.184
+  34.914s | DNS Query       | wc.webexengage.com                                           | 192.168.103.124 -> 64.104.14.184
+  34.951s | DNS Query       | journey-widget.webex.com                                     | 192.168.103.124 -> 64.104.14.184
+  35.039s | DNS Query       | webexapis.com                                                | 192.168.103.124 -> 64.104.14.184
+  43.309s | DNS Query       | wc.imiengage.io                                              | 192.168.103.124 -> 64.104.14.184
+  43.411s | DNS Query       | analyzer-v2.wxcc-jp1.cisco.com                               | 192.168.103.124 -> 64.104.14.184
+  43.495s | DNS Query       | ccwcapi-site-1.anz.webexengage.com                           | 192.168.103.124 -> 64.104.14.184
+  43.687s | DNS Query       | wxccanalyzerbe.wxcc-jp1.cisco.com                            | 192.168.103.124 -> 64.104.14.184
+  44.264s | DNS Query       | config-service.prodjp1.ciscoccservice.com                    | 192.168.103.124 -> 64.104.14.184

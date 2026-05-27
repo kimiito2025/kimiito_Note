@@ -1,0 +1,221 @@
+﻿<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Webex Sign-in Flow 20260522 01</title>
+  <style>
+    :root {
+      --bg: #f2efe8;
+      --panel: #fffdfa;
+      --text: #1f2937;
+      --muted: #5b6472;
+      --line: #d8d1c7;
+      --accent: #0b5cab;
+      --accent2: #d9480f;
+    }
+    body {
+      margin: 0;
+      font-family: "Yu Gothic UI", "Hiragino Kaku Gothic ProN", sans-serif;
+      color: var(--text);
+      background:
+        radial-gradient(circle at 10% 20%, #efe6d8 0%, transparent 35%),
+        radial-gradient(circle at 90% 80%, #e8efe6 0%, transparent 30%),
+        var(--bg);
+      line-height: 1.5;
+    }
+    .wrap {
+      max-width: 1080px;
+      margin: 0 auto;
+      padding: 28px 18px 60px;
+    }
+    h1 {
+      margin: 0 0 8px;
+      font-size: 1.8rem;
+      letter-spacing: 0.02em;
+    }
+    .sub {
+      margin: 0 0 18px;
+      color: var(--muted);
+      font-size: 0.95rem;
+    }
+    .card {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 16px;
+      margin: 14px 0;
+      box-shadow: 0 8px 18px rgba(31, 41, 55, 0.06);
+    }
+    h2 {
+      margin: 0 0 10px;
+      font-size: 1.2rem;
+      color: var(--accent);
+    }
+    .note {
+      color: var(--muted);
+      font-size: 0.88rem;
+    }
+    .warn {
+      color: var(--accent2);
+      font-weight: 600;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.92rem;
+    }
+    th, td {
+      border-bottom: 1px solid var(--line);
+      padding: 8px 6px;
+      text-align: left;
+      vertical-align: top;
+    }
+    th {
+      color: var(--muted);
+      font-weight: 600;
+      background: #fbf8f3;
+    }
+    @media (max-width: 760px) {
+      table { font-size: 0.82rem; }
+      h1 { font-size: 1.4rem; }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>Webex サインイン通信フロー</h1>
+    <p class="sub">対象: 1_PC_webex/webex.pcapng / 端末IP: 192.168.103.124 / 観測時間: 約136秒 / 版: 20260522_01</p>
+
+    <div class="card">
+      <h2>フローダイアグラム（最初 → 次 → 最後）</h2>
+      <div class="mermaid">
+sequenceDiagram
+    autonumber
+    participant PC as PC (192.168.103.124)
+    participant DNS as DNS (64.104.14.184/76.247)
+    participant WXT as Webex Edge
+    participant MS as Microsoft IdP
+    participant IDB as Webex IdBroker
+    participant WID as Webex Identity
+    participant SVC as Webex Core Services
+
+    PC->>DNS: DNS Query ty6-wxt-jp.bcld.webex.com
+    PC->>WXT: TLS ty6-wxt-jp.bcld.webex.com (135.84.169.185:443)
+    PC->>WXT: TCP ty01.hosted-jp.bcld.webex.com (144.196.102.201:8934)
+
+    PC->>MS: TLS login.live.com / login.microsoftonline.com :443
+    MS-->>PC: 認証レスポンス
+
+    PC->>IDB: TLS idbroker-sg.webex.com :443
+    PC->>WID: TLS identity-sg.webex.com :443
+
+    PC->>SVC: TLS wdm/settings/contacts/conv/calling/locus/people ... :443
+    SVC-->>PC: 初期化データ返却
+      </div>
+      <p class="note">時系列で「最初にWebex Edge到達 → 次にMicrosoft認証 → 最後にWebex認証基盤とサービス初期化」を追える構成です。</p>
+    </div>
+
+    <div class="card">
+      <h2>各ステップの説明</h2>
+      <table>
+        <thead>
+          <tr>
+            <th style="width:3em">番号</th>
+            <th style="width:14em">通信</th>
+            <th>何をしているか</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>①</td>
+            <td>PC → DNS</td>
+            <td>Webex アプリが最初に <code>ty6-wxt-jp.bcld.webex.com</code> の名前解決を行います。まずどのIPアドレスに接続すべきかをDNSに問い合わせている段階です。</td>
+          </tr>
+          <tr>
+            <td>②</td>
+            <td>PC → Webex Edge (TLS :443)</td>
+            <td>DNSで得たIPアドレス（135.84.169.185）に対して HTTPS/TLS セッションを確立します。Webex の日本リージョンEdge（BCLDゲートウェイ）への入口接続です。</td>
+          </tr>
+          <tr>
+            <td>③</td>
+            <td>PC → Webex Edge (TCP :8934)</td>
+            <td>Webex Calling 用のシグナリングポート（8934）への接続を開始します。通話機能を利用するための専用チャネルです。</td>
+          </tr>
+          <tr>
+            <td>④</td>
+            <td>PC → Microsoft IdP (TLS :443)</td>
+            <td>Microsoft の認証基盤（login.live.com / login.microsoftonline.com）へ TLS 接続します。Webex が Microsoft アカウント（Azure AD / Entra ID）でのサインインを求めている段階です。</td>
+          </tr>
+          <tr>
+            <td>⑤</td>
+            <td>Microsoft IdP → PC</td>
+            <td>Microsoft から認証結果（IDトークン / アクセストークン）が返却されます。この応答に認証成功の証明が含まれます。</td>
+          </tr>
+          <tr>
+            <td>⑥</td>
+            <td>PC → Webex IdBroker (TLS :443)</td>
+            <td>Microsoft から受け取ったトークンを Webex 側の ID ブローカー（idbroker-sg.webex.com）に提示します。Webex は自社のアカウントシステムと Microsoft アカウントを照合し、Webex セッションを発行します。</td>
+          </tr>
+          <tr>
+            <td>⑦</td>
+            <td>PC → Webex Identity (TLS :443)</td>
+            <td>Webex Identity サービス（identity-sg.webex.com）に接続し、ユーザーのプロフィール・権限・ライセンス情報を取得します。サインインが実質的に完了するフェーズです。</td>
+          </tr>
+          <tr>
+            <td>⑧</td>
+            <td>PC → Webex Core Services (TLS :443)</td>
+            <td>サインイン完了後、Webex アプリが各機能（デバイス管理・設定・連絡先・メッセージ・通話・会議・カレンダーなど）のAPIエンドポイントへ一斉に初期接続します。これによりホーム画面が表示される状態になります。</td>
+          </tr>
+          <tr>
+            <td>⑨</td>
+            <td>Webex Core Services → PC</td>
+            <td>各サービスから初期データ（連絡先一覧・未読メッセージ数・設定値など）が返却され、Webex アプリの表示が完成します。</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="card">
+      <h2>主要イベント（根拠）</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>相対時刻</th>
+            <th>通信種別</th>
+            <th>宛先（ドメイン / IP:Port）</th>
+            <th>意味</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td>+0.000s</td><td>DNS</td><td>ty6-wxt-jp.bcld.webex.com</td><td>Webex Edge到達先の名前解決</td></tr>
+          <tr><td>+0.106s</td><td>TLS</td><td>ty6-wxt-jp.bcld.webex.com / 135.84.169.185:443</td><td>Webex初期接続</td></tr>
+          <tr><td>+11.152s</td><td>TCP</td><td>ty01.hosted-jp.bcld.webex.com / 144.196.102.201:8934</td><td>Calling関連接続</td></tr>
+          <tr><td>+45.014s</td><td>TLS</td><td>login.live.com / 20.190.166.68:443</td><td>外部IdP認証</td></tr>
+          <tr><td>+65.839s</td><td>TLS</td><td>login.microsoftonline.com / 20.190.141.32:443</td><td>認証継続</td></tr>
+          <tr><td>+68.182s</td><td>TLS</td><td>idbroker-sg.webex.com / 170.72.237.117:443</td><td>Webex側トークン連携</td></tr>
+          <tr><td>+130.433s</td><td>TLS</td><td>identity-sg.webex.com / 170.72.237.218:443</td><td>IDセッション確立</td></tr>
+          <tr><td>+130s〜136s</td><td>TLS群</td><td>wdm/settings/contacts/conv/calling/locus/people など</td><td>サインイン後の機能初期化</td></tr>
+        </tbody>
+      </table>
+      <p class="note"><span class="warn">注意:</span> TLS暗号化のためHTTPパス/本文は不可視です。DNSとSNIからフローを復元しています。</p>
+    </div>
+  </div>
+
+  <script type="module">
+    import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs";
+    mermaid.initialize({
+      startOnLoad: true,
+      theme: "base",
+      themeVariables: {
+        primaryColor: "#f8f3ea",
+        primaryTextColor: "#1f2937",
+        primaryBorderColor: "#9aa5b1",
+        lineColor: "#4b5563",
+        secondaryColor: "#eef2f7",
+        tertiaryColor: "#f3f6f9"
+      }
+    });
+  </script>
+</body>
+</html>

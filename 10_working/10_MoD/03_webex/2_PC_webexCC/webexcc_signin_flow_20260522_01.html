@@ -1,0 +1,199 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Webex CC Desktop Agent Sign-in Flow</title>
+  <style>
+    :root {
+      --bg: #eef3f1;
+      --panel: #fcfffd;
+      --text: #1f2a37;
+      --muted: #5b6878;
+      --line: #cfd8d4;
+      --accent: #005f73;
+      --accent2: #ca6702;
+    }
+    body {
+      margin: 0;
+      font-family: "Yu Gothic UI", "Hiragino Kaku Gothic ProN", sans-serif;
+      color: var(--text);
+      background:
+        radial-gradient(circle at 8% 18%, #ddeee8 0%, transparent 35%),
+        radial-gradient(circle at 92% 85%, #e9ead8 0%, transparent 30%),
+        var(--bg);
+      line-height: 1.5;
+    }
+    .wrap {
+      max-width: 1120px;
+      margin: 0 auto;
+      padding: 28px 18px 60px;
+    }
+    h1 {
+      margin: 0 0 8px;
+      font-size: 1.8rem;
+      letter-spacing: 0.02em;
+    }
+    .sub {
+      margin: 0 0 16px;
+      color: var(--muted);
+      font-size: 0.95rem;
+    }
+    .card {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 16px;
+      margin: 14px 0;
+      box-shadow: 0 8px 18px rgba(30, 41, 59, 0.06);
+    }
+    h2 {
+      margin: 0 0 10px;
+      font-size: 1.2rem;
+      color: var(--accent);
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.92rem;
+    }
+    th, td {
+      border-bottom: 1px solid var(--line);
+      padding: 8px 6px;
+      text-align: left;
+      vertical-align: top;
+    }
+    th {
+      color: var(--muted);
+      font-weight: 600;
+      background: #f6faf8;
+    }
+    .tag {
+      display: inline-block;
+      margin: 2px 6px 2px 0;
+      padding: 2px 8px;
+      border-radius: 999px;
+      border: 1px solid var(--line);
+      font-size: 0.84rem;
+      background: #f9fcfa;
+    }
+    .note {
+      color: var(--muted);
+      font-size: 0.88rem;
+    }
+    .warn {
+      color: var(--accent2);
+      font-weight: 600;
+    }
+    @media (max-width: 760px) {
+      table { font-size: 0.82rem; }
+      h1 { font-size: 1.4rem; }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>Webex CC Desktop Agent サインイン通信フロー</h1>
+    <p class="sub">対象: webexcc.pcapng / 端末IP: 192.168.103.124 / 観測時間: 約44秒</p>
+
+    <div class="card">
+      <h2>フロー図 (サインイン時の主要やり取り)</h2>
+      <div class="mermaid">
+sequenceDiagram
+    autonumber
+    participant PC as PC (192.168.103.124)
+    participant DNS as DNS (64.104.14.184 / 64.104.76.247)
+    participant WX as Webex Platform (bcld / wbx2)
+    participant ID as Identity (idbroker-sg / identity-sg)
+    participant CC as Webex CC Core (wxcc-jp1.cisco.com)
+    participant ENG as Engage APIs (webexengage / ciscoccservice)
+
+    PC->>DNS: ty01.hosted-jp.bcld.webex.com (t+0.000s)
+    PC->>DNS: _sips._tls.ty01.hosted-jp.bcld.webex.com (t+0.015s)
+    PC->>DNS: ty01.stun/stun50a/stun51a (t+3.445s)
+    PC->>WX: TLS ClientHello SNI=ty6-wxt-jp.bcld.webex.com (t+8.024s)
+
+    Note over PC,WX: ここまでで Webex 基盤の初期接続
+
+    PC->>DNS: desktop.wxcc-jp1.cisco.com (t+11.854s)
+    PC->>DNS: idbroker-sg.webex.com (t+13.850s)
+    PC->>DNS: idbroker-static.webex.com (t+17.245s)
+    PC->>DNS: identity-sg.webex.com (t+25.912s)
+
+    Note over PC,ID: 認証連携・IDセッション確立フェーズ
+
+    PC->>DNS: analyzerui-wxccanalyzer.ciscoccservice.com (t+26.725s)
+    PC->>DNS: api.wxcc-jp1.cisco.com (t+26.793s)
+    PC->>DNS: wxccanalyzer.wxcc-jp1.cisco.com (t+27.246s)
+    PC->>DNS: agentx-backend.prodjp1.ciscoccservice.com (t+31.725s)
+    PC->>DNS: wc.webexengage.com / webexapis.com (t+34.914s)
+    PC->>DNS: wc.imiengage.io / ccwcapi-site-1.anz.webexengage.com (t+43.309s)
+
+    Note over PC,ENG: Desktop Agent UI と API 群の初期化
+      </div>
+      <p class="note">※ このキャプチャでは TLS 本文は暗号化されているため、HTTP パスやAPIボディは不可視です。図は DNS と TLS SNI から復元しています。</p>
+    </div>
+
+    <div class="card">
+      <h2>主要イベント (根拠)</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>相対時刻</th>
+            <th>分類</th>
+            <th>観測先</th>
+            <th>意味</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td>+0.000s</td><td>DNS</td><td>ty01.hosted-jp.bcld.webex.com</td><td>Webex基盤ホスト解決</td></tr>
+          <tr><td>+3.445s</td><td>DNS</td><td>ty01.stun-jp / stun50a / stun51a</td><td>メディア系候補解決</td></tr>
+          <tr><td>+8.024s</td><td>TLS</td><td>ty6-wxt-jp.bcld.webex.com</td><td>Webex基盤へのTLS開始</td></tr>
+          <tr><td>+11.854s</td><td>DNS</td><td>desktop.wxcc-jp1.cisco.com</td><td>Webex CC Desktop入口</td></tr>
+          <tr><td>+13.850s</td><td>DNS</td><td>idbroker-sg.webex.com</td><td>認証ブローカー</td></tr>
+          <tr><td>+25.912s</td><td>DNS</td><td>identity-sg.webex.com</td><td>Identityサービス</td></tr>
+          <tr><td>+26.725s</td><td>DNS</td><td>analyzerui-wxccanalyzer.ciscoccservice.com</td><td>Analyzer UI連携</td></tr>
+          <tr><td>+26.793s</td><td>DNS</td><td>api.wxcc-jp1.cisco.com</td><td>CC API連携</td></tr>
+          <tr><td>+31.725s</td><td>DNS</td><td>agentx-backend.prodjp1.ciscoccservice.com</td><td>Agentバックエンド接続</td></tr>
+          <tr><td>+34.914s</td><td>DNS</td><td>wc.webexengage.com / webexapis.com</td><td>Engage API系初期化</td></tr>
+          <tr><td>+43.309s</td><td>DNS</td><td>wc.imiengage.io / ccwcapi-site-1.anz.webexengage.com</td><td>CC関連API群の追加初期化</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="card">
+      <h2>観測ドメイン群 (抜粋)</h2>
+      <span class="tag">desktop.wxcc-jp1.cisco.com</span>
+      <span class="tag">api.wxcc-jp1.cisco.com</span>
+      <span class="tag">wxccanalyzer.wxcc-jp1.cisco.com</span>
+      <span class="tag">wxccanalyzerbe.wxcc-jp1.cisco.com</span>
+      <span class="tag">analyzer-v2.wxcc-jp1.cisco.com</span>
+      <span class="tag">analyzerui-wxccanalyzer.ciscoccservice.com</span>
+      <span class="tag">agentx-backend.prodjp1.ciscoccservice.com</span>
+      <span class="tag">config-service.prodjp1.ciscoccservice.com</span>
+      <span class="tag">wc.webexengage.com</span>
+      <span class="tag">ccwcapi-site-1.anz.webexengage.com</span>
+      <span class="tag">wc.imiengage.io</span>
+      <span class="tag">idbroker-sg.webex.com</span>
+      <span class="tag">identity-sg.webex.com</span>
+      <p class="note"><span class="warn">注意:</span> 実際の認証結果（成功/失敗）や送信パラメータは TLS 復号なしでは判定不可です。</p>
+    </div>
+  </div>
+
+  <script type="module">
+    import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs";
+    mermaid.initialize({
+      startOnLoad: true,
+      theme: "base",
+      themeVariables: {
+        primaryColor: "#f4faf7",
+        primaryTextColor: "#1f2a37",
+        primaryBorderColor: "#8ea79f",
+        lineColor: "#4b5c66",
+        secondaryColor: "#edf5f2",
+        tertiaryColor: "#f9faf4"
+      }
+    });
+  </script>
+</body>
+</html>
